@@ -16,11 +16,43 @@ Answer:
 
 ```python
 # Thrift schema (student.thrift)
+struct Student {
+  1: required string name,
+  2: optional i8 age,
+  3: optional list<string> courses
+}
+
+service School {
+    Student enrollCourse(1: required Student student, 2: required string course)
+}
 
 # Thrift server (student_server.py)
+import thriftpy2
+student_thrift = thriftpy2.load("./student.thrift", module_name="student_thrift")
+
+from thriftpy2.rpc import make_server
+
+class School(object):
+    def enrollCourse(self, student, course):
+        student.courses.append(course)
+        return student
+
+server = make_server(student_thrift.School, School(), client_timeout=None)
+print("Starting and running the server...")
+print("Press Ctrl+C to stop the server.")
+server.serve()
 
 # Thrift client (student_client.py)
+import thriftpy2
+student_thrift = thriftpy2.load("./student.thrift", module_name="student_thrift")
 
+from thriftpy2.rpc import make_client
+
+school = make_client(student_thrift.School, timeout=None)
+
+martin = student_thrift.Student(name="Martin", age=22, courses=[])
+martin = school.enrollCourse(martin, "Data Science")
+print(martin)
 ```
 
 ### Question 2
