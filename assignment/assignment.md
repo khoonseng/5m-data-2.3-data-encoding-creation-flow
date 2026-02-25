@@ -63,11 +63,55 @@ Answer:
 
 ```python
 # Protobuf schema (book.proto)
+syntax = "proto3";
+
+message Book {
+  string title = 1;
+  string author = 2;
+  optional int32 page_count = 3;
+}
+
+message BookRequest {
+  Book book = 1;
+}
+
+service Library {
+  rpc checkoutBook(BookRequest) returns (Book) {}
+}
 
 # Protobuf server (book_server.py)
+from concurrent import futures
+import grpc
+import book_pb2_grpc
+
+
+class Library(book_pb2_grpc.LibraryServicer):
+
+  def checkoutBook(self, request, context):
+    return request.book
+
+server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
+book_pb2_grpc.add_LibraryServicer_to_server(
+    Library(), server)
+server.add_insecure_port('[::]:50051')
+print("Starting and running the server...")
+print("Press Ctrl+C to stop the server.")
+server.start()
+server.wait_for_termination()
 
 # Protobuf client (book_client.py)
+import sys
+import grpc
+import book_pb2
+import book_pb2_grpc
 
+def checkout_book(stub, book):
+    return stub.checkoutBook(book_pb2.BookRequest(book=book))
+
+with grpc.insecure_channel('localhost:50051') as channel:
+    newBook = book_pb2.Book(title='Intro to Data Science', author='John Snow', page_count=999)
+    stub = book_pb2_grpc.LibraryStub(channel)
+    print(checkout_book(stub, newBook))
 ```
 
 ## Submission
